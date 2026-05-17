@@ -171,6 +171,13 @@ async fn close_window(window: tauri::Window) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn open_url(url: String, app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener().open_url(&url, None::<String>)
+        .map_err(|e| format!("Failed to open URL: {}", e))
+}
+
+#[tauri::command]
 async fn start_python_backend(state: State<'_, PythonProcess>, app: tauri::AppHandle) -> Result<String, String> {
     let mut process_guard = state.0.lock().unwrap();
 
@@ -265,7 +272,8 @@ fn main() {
             save_settings,
             minimize_window,
             maximize_window,
-            close_window
+            close_window,
+            open_url
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
