@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+src-tauri/target/
+*.msi
+*.exe
+*.pdb
+
+# Settings
+settings.json
+
+# Python
+backend/.venv
+backend/__pycache__
+backend/*.pyc
+backend/.pytest_cache
+backend/.mypy_cache
+backend/uv.lock
+backend.zip
