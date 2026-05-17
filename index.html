@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forza DualSense</title>
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="vignette"></div>
+    <div class="gradient-overlay"></div>
+    
+    <div class="titlebar" data-tauri-drag-region>
+        <div class="titlebar-title">FORZA DUALSENSE</div>
+        <div class="window-controls">
+            <button id="minimize-btn" data-tauri-drag-region="false">_</button>
+            <button id="maximize-btn" data-tauri-drag-region="false">□</button>
+            <button id="close-btn" class="close-btn" data-tauri-drag-region="false">×</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="title-label">
+                <h3 data-i18n="controls">Controls</h3>
+            </div>
+            
+            <div class="panel">
+                <div class="controls">
+                    <button id="start-btn" data-i18n="start">Start</button>
+                    <div style="margin-top: 15px;">
+                        <label data-i18n="forza-path" style="color: rgba(255, 255, 255, 0.7); font-size: 0.85em; display: block; margin-bottom: 8px;">Forza Horizon 6 Path</label>
+                        <div style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
+                            <input type="text" id="forza-path-input" class="styled-input" placeholder="C:\\Games\\ForzaHorizon6\\ForzaHorizon6.exe" style="font-size: 0.85em; flex: 1; min-width: 0;">
+                            <button id="select-forza-btn" class="browse-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status-section">
+                    <h4 data-i18n="status">Status</h4>
+                    <div class="status-bar">
+                        <div class="status-bar-item disconnected" id="dualsense-status">
+                            <span data-i18n="dualsense">DualSense</span>
+                            <span data-i18n="dualsense-disconnected">Disconnected</span>
+                        </div>
+                        <div class="status-bar-item" id="game-status">
+                            <span data-i18n="game">Game</span>
+                            <span data-i18n="game-not-detected">Not Detected</span>
+                        </div>
+                        <div class="status-bar-item" id="udp-status">
+                            <span data-i18n="udp">UDP</span>
+                            <span data-i18n="udp-not-listening">Not Listening</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="title-label">
+                <h3 data-i18n="settings">Settings</h3>
+            </div>
+            
+            <div class="panel">
+                <div class="toggle-item">
+                    <label data-i18n="language">Language</label>
+                    <select id="language-select" class="styled-select">
+                        <option value="en">English</option>
+                        <option value="ru">Русский</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <label data-i18n="udp-port">UDP Port</label>
+                    <input type="number" id="udp-port" min="1024" max="65535" value="5300" class="styled-input">
+                </div>
+                
+                <div class="setting-item">
+                    <label data-i18n="brake-deadzone">Brake Deadzone</label>
+                    <div class="slider-container">
+                        <input type="range" id="brake-deadzone" min="0" max="255" value="50">
+                        <input type="number" class="slider-value-input" id="brake-deadzone-value" min="0" max="255" value="50">
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label data-i18n="brake-baseline-force">Brake Baseline Force</label>
+                    <div class="slider-container">
+                        <input type="range" id="brake-baseline-force" min="0" max="255" value="15">
+                        <input type="number" class="slider-value-input" id="brake-baseline-force-value" min="0" max="255" value="15">
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label data-i18n="brake-max-force">Brake Max Force</label>
+                    <div class="slider-container">
+                        <input type="range" id="brake-max-force" min="0" max="255" value="60">
+                        <input type="number" class="slider-value-input" id="brake-max-force-value" min="0" max="255" value="60">
+                    </div>
+                </div>
+                
+                <div class="toggle-item">
+                    <label data-i18n="enable-brake-resistance">Enable Brake Resistance</label>
+                    <input type="checkbox" id="enable-brake-resistance" checked>
+                </div>
+                
+                <div class="toggle-item">
+                    <label data-i18n="enable-throttle-resistance">Enable Throttle Resistance</label>
+                    <input type="checkbox" id="enable-throttle-resistance" checked>
+                </div>
+                
+                <div class="toggle-item">
+                    <label data-i18n="enable-abs">Enable ABS</label>
+                    <input type="checkbox" id="enable-abs" checked>
+                </div>
+                
+                <div class="toggle-item">
+                    <label data-i18n="enable-startup-pulse">Enable Startup Pulse</label>
+                    <input type="checkbox" id="enable-startup-pulse" checked>
+                </div>
+                
+                <div class="controls">
+                    <div style="display: flex; gap: 10px;">
+                        <button id="save-settings" data-i18n="save">Save</button>
+                        <button id="reset-settings" data-i18n="reset">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <a href="https://github.com/BORGERone/Forza-Dualsense" target="_blank">https://github.com/BORGERone/Forza-Dualsense</a>
+    </div>
+    
+    <script type="module" src="/main.ts"></script>
+    <script>
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
