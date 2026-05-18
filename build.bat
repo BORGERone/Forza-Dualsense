@@ -5,8 +5,7 @@ echo.
 npm run tauri build
 
 echo.
-echo Copying backend files to release folder...
-xcopy src-tauri\backend src-tauri\target\release\backend /E /I /Y
-echo Backend files copied. They will be copied to AppData on first run.
+echo Build complete! Backend files are embedded in the exe.
+echo They will be extracted to AppData on first run.
 
 pause

@@ -10,9 +10,14 @@ use std::path::PathBuf;
 use tauri::{State, Emitter};
 use tauri_plugin_dialog::DialogExt;
 use serde::{Deserialize, Serialize};
+use rust_embed::RustEmbed;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+
+#[derive(RustEmbed)]
+#[folder = "backend/"]
+struct BackendAssets;
 
 struct PythonProcess(Mutex<Option<PythonProcessInner>>);
 
@@ -28,7 +33,7 @@ fn get_app_data_dir() -> Result<PathBuf, String> {
     Ok(app_data_dir)
 }
 
-fn ensure_backend_in_appdata() -> Result<PathBuf, String> {
+fn ensure_backend_in_appdata(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let app_data_dir = get_app_data_dir()?;
 
     // Create app data directory if it doesn't exist
@@ -49,32 +54,78 @@ fn ensure_backend_in_appdata() -> Result<PathBuf, String> {
     eprintln!("Backend not found in AppData, attempting to extract from embedded resources...");
 
     // Extract backend from embedded resources
-    extract_embedded_backend(&backend_dir)?;
+    extract_embedded_backend(&backend_dir, app)?;
 
     eprintln!("Backend successfully extracted to AppData: {}", backend_dir.display());
     Ok(backend_dir)
 }
 
-fn extract_embedded_backend(target_dir: &PathBuf) -> Result<(), String> {
-    // Get exe directory and look for backend folder
+fn extract_embedded_backend(target_dir: &PathBuf, _app: &tauri::AppHandle) -> Result<(), String> {
+    eprintln!("=== BACKEND EXTRACTION DEBUG ===");
+    eprintln!("Target directory: {}", target_dir.display());
+
+    // Try to extract from embedded rust-embed resources first
+    eprintln!("Attempting to extract backend from embedded resources...");
+
+    // Check if we have any embedded files
+    let has_embedded = BackendAssets::iter().next().is_some();
+    eprintln!("Has embedded backend files: {}", has_embedded);
+
+    if has_embedded {
+        eprintln!("Extracting embedded backend files to AppData...");
+        extract_embedded_files(target_dir)?;
+        eprintln!("Backend extracted successfully from embedded resources");
+        return Ok(());
+    }
+
+    // Fallback for dev mode: Look for backend folder next to exe
     let exe_dir = std::env::current_exe()
         .map_err(|e| format!("Failed to get exe path: {}", e))?
         .parent()
         .ok_or("Failed to get exe parent dir")?
         .to_path_buf();
+    eprintln!("No embedded files found (dev mode), looking for backend folder at: {}", exe_dir.display());
 
     let source_backend = exe_dir.join("backend");
+    eprintln!("Backend folder exists: {}", source_backend.exists());
 
-    eprintln!("Looking for backend folder at: {}", source_backend.display());
-
-    // Copy backend from exe directory to appdata
     if source_backend.exists() {
-        eprintln!("Found backend folder, copying to AppData...");
+        eprintln!("Found backend folder next to exe, copying to AppData...");
         copy_dir(&source_backend, target_dir)?;
+        eprintln!("Backend copied successfully from exe directory");
         Ok(())
     } else {
-        Err(format!("Backend folder not found at: {}. Please ensure the 'backend' folder is in the same directory as the exe file.", source_backend.display()))
+        let error_msg = format!(
+            "Backend folder not found at: {}. Also not found in embedded resources. Please ensure the 'backend' folder is in the same directory as the exe file.",
+            source_backend.display()
+        );
+        eprintln!("{}", error_msg);
+        Err(error_msg)
     }
+}
+
+fn extract_embedded_files(target_dir: &PathBuf) -> Result<(), String> {
+    for file_path in BackendAssets::iter() {
+        let file_path = file_path.to_string();
+        let target_path = target_dir.join(&file_path);
+
+        // Create parent directories if needed
+        if let Some(parent) = target_path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
+            }
+        }
+
+        // Extract file content
+        if let Some(content) = BackendAssets::get(&file_path) {
+            let data = content.data;
+            fs::write(&target_path, data)
+                .map_err(|e| format!("Failed to write file {}: {}", target_path.display(), e))?;
+            eprintln!("Extracted: {}", file_path);
+        }
+    }
+    Ok(())
 }
 
 fn copy_dir(source: &PathBuf, destination: &PathBuf) -> Result<(), String> {
@@ -192,7 +243,7 @@ async fn start_python_backend(state: State<'_, PythonProcess>, app: tauri::AppHa
     };
 
     // Ensure backend is in AppData and get path
-    let backend_dir = ensure_backend_in_appdata()?;
+    let backend_dir = ensure_backend_in_appdata(&app)?;
     let backend_path = backend_dir.join("ipc_server.py");
 
     eprintln!("Starting Python backend with path: {}", backend_path.display());
