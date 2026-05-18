@@ -33,14 +33,19 @@ def _find_gamepad():
     """Pick the Game Pad HID interface (usage_page=1, usage=5) or None.
     Audio/sensor interfaces share VID/PID and silently drop trigger writes."""
     devices = hid.enumerate(VENDOR_ID, 0)
+    log.info(f"Found {len(devices)} devices with VID {hex(VENDOR_ID)}")
     for d in devices:
+        log.info(f"Device: PID={hex(d.get('product_id', 0))}, usage_page={d.get('usage_page')}, usage={d.get('usage')}, path={d.get('path')}")
         if (d.get("product_id") in PRODUCT_IDS
                 and d.get("usage_page", 1) == 1
                 and d.get("usage", 5) == 5):
+            log.info(f"Found correct DualSense interface: {d}")
             return d
     for d in devices:
         if d.get("product_id") in PRODUCT_IDS:
+            log.warning(f"Found DualSense with incorrect interface, using anyway: {d}")
             return d
+    log.warning("No DualSense device found")
     return None
 
 
@@ -130,17 +135,22 @@ class DualSense:
 
     # MARK: connect / disconnect helpers
     def _try_connect(self) -> bool:
+        log.info("Attempting to connect to DualSense...")
         info = _find_gamepad()
         if not info:
+            log.warning("DualSense not found by _find_gamepad()")
             return False
         try:
+            log.info(f"Opening device at path: {info.get('path')}")
             dev = hid.device()
             dev.open_path(info["path"])
             dev.set_nonblocking(True)
+            log.info("Device opened successfully")
         except (OSError, IOError) as e:
             if not self._open_hinted:
                 _log_open_failure(e)
                 self._open_hinted = True
+            log.error(f"Failed to open device: {e}")
             return False
         self.dev = dev
         self.lay = BT if _is_bluetooth(info) else USB
@@ -149,17 +159,20 @@ class DualSense:
         log.info("DualSense connected (%s)", "BT" if self.lay["bt"] else "USB")
 
         if self._enable_startup_pulse:
+            log.info(f"Sending startup pulse with force {self._pulse_force}")
             try:
                 pulse = (M_RIGID, (0, self._pulse_force))
                 self.dev.write(self._build(pulse, pulse)); time.sleep(0.2)
                 self.dev.write(self._build(off(), off()))
-            except Exception:
-                pass
+                log.info("Startup pulse sent successfully")
+            except Exception as e:
+                log.error(f"Failed to send startup pulse: {e}")
         # MARK: Power saver — one-shot at connect
         try:
             self.dev.write(self._build_power_saver())
-        except Exception:
-            pass
+            log.info("Power saver enabled")
+        except Exception as e:
+            log.error(f"Failed to enable power saver: {e}")
         return True
 
     def _disconnect(self):

@@ -1,0 +1,8 @@
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,370 - INFO - ==================================================
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,370 - INFO - Starting IPC Server
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,370 - INFO - Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,370 - INFO - Working directory: C:\Users\Neolin\AppData\Local\Forza DualSense\backend
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,370 - INFO - Script location: C:\Users\Neolin\AppData\Local\Forza DualSense\backend\ipc_server.py
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,371 - INFO - Backend directory: C:\Users\Neolin\AppData\Local\Forza DualSense\backend
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,371 - INFO - Attempting to import modules...
+[2026-05-18 20:34:23] [Python stderr] 2026-05-18 20:34:23,382 - ERROR - Import error: No module named 'hid'

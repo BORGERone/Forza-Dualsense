@@ -1,0 +1,9 @@
+[2026-05-18 20:34:31] Found 'python' in PATH
+[2026-05-18 20:34:31] Starting Python backend...
+[2026-05-18 20:34:31] Python executable: python
+[2026-05-18 20:34:31] Backend directory: C:\Users\Neolin\AppData\Local\Forza DualSense\backend
+[2026-05-18 20:34:31] Python process started with PID: 8444
+[2026-05-18 20:34:31] send_command_to_python: command = {"type":"start"}
+[2026-05-18 20:34:31] Command sent: {"type":"start"}
+[2026-05-18 20:34:31] send_command_to_python: command = {"type":"get_status"}
+[2026-05-18 20:34:31] Command sent: {"type":"get_status"}

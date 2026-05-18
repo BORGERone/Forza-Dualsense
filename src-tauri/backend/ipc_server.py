@@ -3,13 +3,32 @@ import sys
 import json
 import logging
 from pathlib import Path
+from datetime import datetime
 
-# Setup logging to stderr only
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    stream=sys.stderr
-)
+# Setup logging to file in AppData and stderr
+def setup_logging():
+    # Determine log file location in AppData
+    if sys.platform == "win32":
+        log_dir = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "Forza DualSense"
+    else:
+        log_dir = Path.home() / ".local" / "share" / "forza-dualsense"
+    
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / f"dualsense_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler(sys.stderr)
+        ]
+    )
+    return log_file
+
+import os
+log_file = setup_logging()
 log = logging.getLogger("fhds.ipc")
 
 log.info("=" * 50)
@@ -17,6 +36,7 @@ log.info("Starting IPC Server")
 log.info(f"Python version: {sys.version}")
 log.info(f"Working directory: {Path.cwd()}")
 log.info(f"Script location: {Path(__file__)}")
+log.info(f"Log file: {log_file}")
 
 # Add the backend directory to path to import modules
 backend_dir = Path(__file__).parent
@@ -152,9 +172,10 @@ class IPCServer:
         
     def _send_status(self):
         """Send current status to Tauri frontend."""
+        dualsense_connected = self.ds.connected if self.ds else False
         status = {
             "type": "status",
-            "dualsense_connected": self.ds.connected if self.ds else False,
+            "dualsense_connected": dualsense_connected,
             "running": self.running,
             "settings": {
                 "udp_host": self.settings.udp_host,
@@ -163,6 +184,7 @@ class IPCServer:
                 "enable_startup_pulse": self.settings.enable_startup_pulse,
             }
         }
+        log.info(f"Status: dualsense_connected={dualsense_connected}, running={self.running}")
         self._send_response(status)
     
     def _update_settings(self, new_settings: dict):

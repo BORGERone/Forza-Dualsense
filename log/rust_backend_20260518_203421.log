@@ -1,0 +1,8 @@
+[2026-05-18 20:34:21] === APPLICATION START ===
+[2026-05-18 20:34:21] OS: windows
+[2026-05-18 20:34:21] Arch: x86_64
+[2026-05-18 20:34:21] start_python_backend: called
+[2026-05-18 20:34:21] ensure_backend_in_appdata: called
+[2026-05-18 20:34:21] AppData directory: C:\Users\Neolin\AppData\Local\Forza DualSense
+[2026-05-18 20:34:21] Backend found in AppData: C:\Users\Neolin\AppData\Local\Forza DualSense\backend
+[2026-05-18 20:34:21] find_python: called

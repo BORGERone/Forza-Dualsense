@@ -5,6 +5,9 @@
 </p>
 
 <p align="center">
+  <img width="1202" height="802" alt="Screenshot" src="https://github.com/user-attachments/assets/a831992c-0474-497a-bf23-7f85b4de5fe6" />
+</p>
+<p align="center">
   <i>Interfaz moderna para gestionar el mando DualSense en Forza Horizon</i>
 </p>
 

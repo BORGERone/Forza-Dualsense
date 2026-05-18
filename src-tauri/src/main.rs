@@ -3,17 +3,40 @@
 
 use std::process::{Command, Child, Stdio, ChildStdin};
 use std::sync::Mutex;
-use std::io::{Write, BufRead, BufReader};
+use std::io::{BufRead, BufReader};
 use std::thread;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write as IoWrite;
 use std::path::PathBuf;
-use tauri::{State, Emitter};
+use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 use serde::{Deserialize, Serialize};
 use rust_embed::RustEmbed;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+
+fn setup_logging() -> std::io::Result<std::fs::File> {
+    let app_data_dir = get_app_data_dir()
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    
+    let log_file = app_data_dir.join(format!("rust_backend_{}.log", chrono::Local::now().format("%Y%m%d_%H%M%S")));
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file)?;
+    
+    // Don't print to stderr to avoid console window
+    Ok(file)
+}
+
+fn log_to_file(message: &str) {
+    if let Ok(mut file) = setup_logging() {
+        let _ = writeln!(file, "[{}] {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), message);
+    }
+    // Don't print to stderr to avoid console window
+}
 
 #[derive(RustEmbed)]
 #[folder = "backend/"]
@@ -33,13 +56,123 @@ fn get_app_data_dir() -> Result<PathBuf, String> {
     Ok(app_data_dir)
 }
 
-fn ensure_backend_in_appdata(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+fn find_python() -> Result<String, String> {
+    log_to_file("find_python: called");
+    
+    // Try to find python in PATH
+    if let Ok(output) = std::process::Command::new("python").arg("--version").output() {
+        if output.status.success() {
+            log_to_file("Found 'python' in PATH");
+            return Ok("python".to_string());
+        }
+    }
+    
+    if let Ok(output) = std::process::Command::new("python3").arg("--version").output() {
+        if output.status.success() {
+            log_to_file("Found 'python3' in PATH");
+            return Ok("python3".to_string());
+        }
+    }
+
+    // Try common installation paths on Windows
+    if cfg!(windows) {
+        log_to_file("Checking common Python installation paths on Windows");
+        let common_paths = vec![
+            r"C:\Python313\python.exe",
+            r"C:\Python312\python.exe",
+            r"C:\Python311\python.exe",
+            r"C:\Python310\python.exe",
+            r"C:\Program Files\Python313\python.exe",
+            r"C:\Program Files\Python312\python.exe",
+            r"C:\Program Files\Python311\python.exe",
+            r"C:\Program Files\Python310\python.exe",
+            r"C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python313\python.exe",
+            r"C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python312\python.exe",
+            r"C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe",
+            r"C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310\python.exe",
+        ];
+
+        for path in common_paths {
+            let expanded_path = path.replace("%USERNAME%", &std::env::var("USERNAME").unwrap_or_default());
+            if PathBuf::from(&expanded_path).exists() {
+                log_to_file(&format!("Found Python at: {}", expanded_path));
+                return Ok(expanded_path);
+            }
+        }
+    }
+
+    let err = "Python not found. Please install Python 3.10 or later.".to_string();
+    log_to_file(&err);
+    Err(err)
+}
+
+fn install_python_dependencies(python_exe: &str, backend_dir: &PathBuf) -> Result<(), String> {
+    log_to_file("Checking Python dependencies...");
+    
+    // Check if dependencies are installed by trying to import them
+    let check_script = r#"
+import sys
+try:
+    import hid
+    import psutil
+    import textual
+    print("DEPENDENCIES_OK")
+except ImportError as e:
+    print(f"MISSING: {e}")
+    sys.exit(1)
+"#;
+    
+    let check_result = Command::new(python_exe)
+        .arg("-c")
+        .arg(check_script)
+        .current_dir(backend_dir)
+        .output()
+        .map_err(|e| format!("Failed to check dependencies: {}", e))?;
+    
+    if String::from_utf8_lossy(&check_result.stdout).contains("DEPENDENCIES_OK") {
+        log_to_file("All dependencies are already installed");
+        return Ok(());
+    }
+    
+    log_to_file("Dependencies not found, installing via pip...");
+    
+    // Install dependencies using pip
+    let install_result = Command::new(python_exe)
+        .arg("-m")
+        .arg("pip")
+        .arg("install")
+        .arg("hidapi>=0.15.0")
+        .arg("psutil>=7.2.2")
+        .arg("textual>=8.2.5")
+        .current_dir(backend_dir)
+        .output()
+        .map_err(|e| format!("Failed to install dependencies: {}", e))?;
+    
+    if !install_result.status.success() {
+        let error = String::from_utf8_lossy(&install_result.stderr);
+        let err_msg = format!("Failed to install dependencies: {}", error);
+        log_to_file(&err_msg);
+        return Err(err_msg);
+    }
+    
+    log_to_file("Dependencies installed successfully");
+    Ok(())
+}
+
+fn ensure_backend_in_appdata() -> Result<PathBuf, String> {
+    log_to_file("ensure_backend_in_appdata: called");
     let app_data_dir = get_app_data_dir()?;
+    log_to_file(&format!("AppData directory: {}", app_data_dir.display()));
 
     // Create app data directory if it doesn't exist
     if !app_data_dir.exists() {
+        log_to_file("Creating AppData directory...");
         fs::create_dir_all(&app_data_dir)
-            .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+            .map_err(|e| {
+                let err = format!("Failed to create app data directory: {}", e);
+                log_to_file(&err);
+                err
+            })?;
     }
 
     let backend_dir = app_data_dir.join("backend");
@@ -47,34 +180,34 @@ fn ensure_backend_in_appdata(app: &tauri::AppHandle) -> Result<PathBuf, String> 
 
     // Check if backend already exists in appdata
     if backend_script.exists() {
-        eprintln!("Backend found in AppData: {}", backend_dir.display());
+        log_to_file(&format!("Backend found in AppData: {}", backend_dir.display()));
         return Ok(backend_dir);
     }
 
-    eprintln!("Backend not found in AppData, attempting to extract from embedded resources...");
+    log_to_file("Backend not found in AppData, attempting to extract from embedded resources...");
 
     // Extract backend from embedded resources
-    extract_embedded_backend(&backend_dir, app)?;
+    extract_embedded_backend(&backend_dir)?;
 
-    eprintln!("Backend successfully extracted to AppData: {}", backend_dir.display());
+    log_to_file(&format!("Backend successfully extracted to AppData: {}", backend_dir.display()));
     Ok(backend_dir)
 }
 
-fn extract_embedded_backend(target_dir: &PathBuf, _app: &tauri::AppHandle) -> Result<(), String> {
-    eprintln!("=== BACKEND EXTRACTION DEBUG ===");
-    eprintln!("Target directory: {}", target_dir.display());
+fn extract_embedded_backend(target_dir: &PathBuf) -> Result<(), String> {
+    log_to_file("=== BACKEND EXTRACTION DEBUG ===");
+    log_to_file(&format!("Target directory: {}", target_dir.display()));
 
     // Try to extract from embedded rust-embed resources first
-    eprintln!("Attempting to extract backend from embedded resources...");
+    log_to_file("Attempting to extract backend from embedded resources...");
 
     // Check if we have any embedded files
     let has_embedded = BackendAssets::iter().next().is_some();
-    eprintln!("Has embedded backend files: {}", has_embedded);
+    log_to_file(&format!("Has embedded backend files: {}", has_embedded));
 
     if has_embedded {
-        eprintln!("Extracting embedded backend files to AppData...");
+        log_to_file("Extracting embedded backend files to AppData...");
         extract_embedded_files(target_dir)?;
-        eprintln!("Backend extracted successfully from embedded resources");
+        log_to_file("Backend extracted successfully from embedded resources");
         return Ok(());
     }
 
@@ -84,22 +217,22 @@ fn extract_embedded_backend(target_dir: &PathBuf, _app: &tauri::AppHandle) -> Re
         .parent()
         .ok_or("Failed to get exe parent dir")?
         .to_path_buf();
-    eprintln!("No embedded files found (dev mode), looking for backend folder at: {}", exe_dir.display());
+    log_to_file(&format!("No embedded files found (dev mode), looking for backend folder at: {}", exe_dir.display()));
 
     let source_backend = exe_dir.join("backend");
-    eprintln!("Backend folder exists: {}", source_backend.exists());
+    log_to_file(&format!("Backend folder exists: {}", source_backend.exists()));
 
     if source_backend.exists() {
-        eprintln!("Found backend folder next to exe, copying to AppData...");
+        log_to_file("Found backend folder next to exe, copying to AppData...");
         copy_dir(&source_backend, target_dir)?;
-        eprintln!("Backend copied successfully from exe directory");
+        log_to_file("Backend copied successfully from exe directory");
         Ok(())
     } else {
         let error_msg = format!(
             "Backend folder not found at: {}. Also not found in embedded resources. Please ensure the 'backend' folder is in the same directory as the exe file.",
             source_backend.display()
         );
-        eprintln!("{}", error_msg);
+        log_to_file(&error_msg);
         Err(error_msg)
     }
 }
@@ -113,7 +246,11 @@ fn extract_embedded_files(target_dir: &PathBuf) -> Result<(), String> {
         if let Some(parent) = target_path.parent() {
             if !parent.exists() {
                 fs::create_dir_all(parent)
-                    .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
+                    .map_err(|e| {
+                        let err = format!("Failed to create directory {}: {}", parent.display(), e);
+                        log_to_file(&err);
+                        err
+                    })?;
             }
         }
 
@@ -121,37 +258,72 @@ fn extract_embedded_files(target_dir: &PathBuf) -> Result<(), String> {
         if let Some(content) = BackendAssets::get(&file_path) {
             let data = content.data;
             fs::write(&target_path, data)
-                .map_err(|e| format!("Failed to write file {}: {}", target_path.display(), e))?;
-            eprintln!("Extracted: {}", file_path);
+                .map_err(|e| {
+                    let err = format!("Failed to write file {}: {}", target_path.display(), e);
+                    log_to_file(&err);
+                    err
+                })?;
+            log_to_file(&format!("Extracted: {}", file_path));
         }
     }
     Ok(())
 }
 
 fn copy_dir(source: &PathBuf, destination: &PathBuf) -> Result<(), String> {
+    log_to_file(&format!("copy_dir: source={}, destination={}", source.display(), destination.display()));
+    
     if destination.exists() {
+        log_to_file("Removing existing directory...");
         fs::remove_dir_all(destination)
-            .map_err(|e| format!("Failed to remove existing directory: {}", e))?;
+            .map_err(|e| {
+                let err = format!("Failed to remove existing directory: {}", e);
+                log_to_file(&err);
+                err
+            })?;
     }
 
+    log_to_file("Creating destination directory...");
     fs::create_dir_all(destination)
-        .map_err(|e| format!("Failed to create directory: {}", e))?;
+        .map_err(|e| {
+            let err = format!("Failed to create directory: {}", e);
+            log_to_file(&err);
+            err
+        })?;
 
+    log_to_file("Copying files...");
     for entry in fs::read_dir(source)
-        .map_err(|e| format!("Failed to read source directory: {}", e))?
+        .map_err(|e| {
+            let err = format!("Failed to read source directory: {}", e);
+            log_to_file(&err);
+            err
+        })?
     {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let entry = entry.map_err(|e| {
+            let err = format!("Failed to read entry: {}", e);
+            log_to_file(&err);
+            err
+        })?;
         let source_path = entry.path();
         let destination_path = destination.join(entry.file_name());
 
-        if entry.file_type().map_err(|e| format!("Failed to get file type: {}", e))?.is_dir() {
+        if entry.file_type().map_err(|e| {
+            let err = format!("Failed to get file type: {}", e);
+            log_to_file(&err);
+            err
+        })?.is_dir() {
             copy_dir(&source_path, &destination_path)?;
         } else {
+            log_to_file(&format!("Copying file: {} -> {}", source_path.display(), destination_path.display()));
             fs::copy(&source_path, &destination_path)
-                .map_err(|e| format!("Failed to copy file: {}", e))?;
+                .map_err(|e| {
+                    let err = format!("Failed to copy file: {}", e);
+                    log_to_file(&err);
+                    err
+                })?;
         }
     }
 
+    log_to_file("Directory copied successfully");
     Ok(())
 }
 
@@ -265,88 +437,131 @@ async fn open_url(url: String, app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn start_python_backend(state: State<'_, PythonProcess>, app: tauri::AppHandle) -> Result<String, String> {
+async fn start_python_backend(state: State<'_, PythonProcess>) -> Result<String, String> {
+    log_to_file("start_python_backend: called");
     let mut process_guard = state.0.lock().unwrap();
 
     if process_guard.is_some() {
-        return Err("Python backend is already running".to_string());
+        let err = "Python backend is already running".to_string();
+        log_to_file(&err);
+        return Err(err);
     }
 
-    let python_cmd = if cfg!(windows) {
-        "python"
-    } else {
-        "python3"
-    };
+    let backend_dir = ensure_backend_in_appdata()?;
+    let python_exe = find_python()?;
 
-    // Ensure backend is in AppData and get path
-    let backend_dir = ensure_backend_in_appdata(&app)?;
-    let backend_path = backend_dir.join("ipc_server.py");
+    log_to_file(&format!("Starting Python backend..."));
+    log_to_file(&format!("Python executable: {}", python_exe));
+    log_to_file(&format!("Backend directory: {}", backend_dir.display()));
 
-    eprintln!("Starting Python backend with path: {}", backend_path.display());
+    // Install dependencies if needed
+    install_python_dependencies(&python_exe, &backend_dir)?;
 
-    let mut child = Command::new(python_cmd)
-        .arg(&backend_path)
+    let ipc_server_path = backend_dir.join("ipc_server.py");
+
+    if !ipc_server_path.exists() {
+        let error_msg = format!("ipc_server.py not found at: {}", ipc_server_path.display());
+        log_to_file(&error_msg);
+        return Err(error_msg);
+    }
+
+    let mut cmd = Command::new(&python_exe);
+    cmd.arg(&ipc_server_path)
+        .current_dir(&backend_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .current_dir(&backend_dir)
-        .creation_flags(if cfg!(windows) {
-            0x08000000 // CREATE_NO_WINDOW
-        } else {
-            0
-        })
-        .spawn()
-        .map_err(|e| format!("Failed to start Python backend: {}", e))?;
+        .stderr(Stdio::piped());
     
+    // On Windows, create process without console window
+    #[cfg(windows)]
+    {
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    
+    let mut child = cmd.spawn()
+        .map_err(|e| {
+            let err = format!("Failed to spawn Python process: {}", e);
+            log_to_file(&err);
+            err
+        })?;
+
+    log_to_file(&format!("Python process started with PID: {}", child.id()));
+
     let stdin = child.stdin.take().ok_or("Failed to open stdin")?;
-    let stdout = child.stdout.take().ok_or("Failed to open stdout")?;
-    
-    let app_handle = app.clone();
+
+    // Spawn a thread to read stderr and log it
+    let stderr = child.stderr.take().ok_or("Failed to open stderr")?;
     thread::spawn(move || {
-        let reader = BufReader::new(stdout);
+        let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(line) = line {
-                let _ = app_handle.emit("python-response", line);
+                log_to_file(&format!("[Python stderr] {}", line));
             }
         }
     });
-    
+
     *process_guard = Some(PythonProcessInner { child, stdin });
     Ok("Python backend started".to_string())
 }
 
 #[tauri::command]
 async fn stop_python_backend(state: State<'_, PythonProcess>) -> Result<String, String> {
+    log_to_file("stop_python_backend: called");
     let mut process_guard = state.0.lock().unwrap();
     
     if let Some(mut inner) = process_guard.take() {
+        log_to_file("Stopping Python backend...");
         inner.child.kill()
-            .map_err(|e| format!("Failed to kill Python backend: {}", e))?;
+            .map_err(|e| {
+                let err = format!("Failed to kill Python backend: {}", e);
+                log_to_file(&err);
+                err
+            })?;
+        log_to_file("Python backend stopped successfully");
         Ok("Python backend stopped".to_string())
     } else {
-        Err("Python backend is not running".to_string())
+        let err = "Python backend is not running".to_string();
+        log_to_file(&err);
+        Err(err)
     }
 }
 
 #[tauri::command]
 async fn send_command_to_python(command: String, state: State<'_, PythonProcess>) -> Result<String, String> {
+    log_to_file(&format!("send_command_to_python: command = {}", command));
     let mut process_guard = state.0.lock().unwrap();
     
     if process_guard.is_none() {
-        return Err("Python backend is not running".to_string());
+        let err = "Python backend is not running".to_string();
+        log_to_file(&err);
+        return Err(err);
     }
     
     if let Some(inner) = process_guard.as_mut() {
         writeln!(inner.stdin, "{}", command)
-            .map_err(|e| format!("Failed to write to Python stdin: {}", e))?;
+            .map_err(|e| {
+                let err = format!("Failed to write to Python stdin: {}", e);
+                log_to_file(&err);
+                err
+            })?;
         inner.stdin.flush()
-            .map_err(|e| format!("Failed to flush Python stdin: {}", e))?;
+            .map_err(|e| {
+                let err = format!("Failed to flush Python stdin: {}", e);
+                log_to_file(&err);
+                err
+            })?;
     }
     
-    Ok(format!("Command sent: {}", command))
+    let msg = format!("Command sent: {}", command);
+    log_to_file(&msg);
+    Ok(msg)
 }
 
 fn main() {
+    log_to_file("=== APPLICATION START ===");
+    log_to_file(&format!("OS: {}", std::env::consts::OS));
+    log_to_file(&format!("Arch: {}", std::env::consts::ARCH));
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(PythonProcess(Mutex::new(None)))

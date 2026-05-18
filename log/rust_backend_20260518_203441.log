@@ -1,0 +1,2 @@
+[2026-05-18 20:34:41] send_command_to_python: command = {"type":"get_status"}
+[2026-05-18 20:34:41] Failed to write to Python stdin: Идет закрытие канала. (os error 232)
