@@ -189,10 +189,16 @@ async fn launch_exe(path: String) -> Result<String, String> {
 
 #[tauri::command]
 async fn save_settings(settings: Settings) -> Result<String, String> {
-    // Save settings to file
-    let settings_path = std::env::current_dir()
-        .map_err(|e| format!("Failed to get current dir: {}", e))?
-        .join("settings.json");
+    // Save settings to AppData
+    let app_data_dir = get_app_data_dir()?;
+
+    // Create app data directory if it doesn't exist
+    if !app_data_dir.exists() {
+        fs::create_dir_all(&app_data_dir)
+            .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+    }
+
+    let settings_path = app_data_dir.join("settings.json");
 
     let settings_json = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
@@ -201,6 +207,36 @@ async fn save_settings(settings: Settings) -> Result<String, String> {
         .map_err(|e| format!("Failed to write settings file: {}", e))?;
 
     Ok("Settings saved".to_string())
+}
+
+#[tauri::command]
+async fn load_settings() -> Result<Settings, String> {
+    // Load settings from AppData
+    let app_data_dir = get_app_data_dir()?;
+    let settings_path = app_data_dir.join("settings.json");
+
+    if !settings_path.exists() {
+        // Return default settings if file doesn't exist
+        return Ok(Settings {
+            udp_host: "127.0.0.1".to_string(),
+            udp_port: 5300,
+            brake_deadzone: 50,
+            brake_baseline_force: 15,
+            brake_max_force: 60,
+            enable_brake_resistance: true,
+            enable_throttle_resistance: true,
+            enable_abs: true,
+            enable_startup_pulse: true,
+        });
+    }
+
+    let settings_json = fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read settings file: {}", e))?;
+
+    let settings: Settings = serde_json::from_str(&settings_json)
+        .map_err(|e| format!("Failed to parse settings file: {}", e))?;
+
+    Ok(settings)
 }
 
 #[tauri::command]
@@ -321,6 +357,7 @@ fn main() {
             open_file_dialog,
             launch_exe,
             save_settings,
+            load_settings,
             minimize_window,
             maximize_window,
             close_window,

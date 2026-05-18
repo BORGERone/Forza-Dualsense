@@ -407,6 +407,33 @@ setInterval(getStatus, 5000);
 // Load saved language
 loadLanguage();
 
+// Load saved settings
+async function loadSettings() {
+    try {
+        const settings = await invoke('load_settings') as any;
+        
+        (document.getElementById('udp-port') as HTMLInputElement).value = settings.udp_port;
+        (document.getElementById('brake-deadzone') as HTMLInputElement).value = settings.brake_deadzone;
+        (document.getElementById('brake-baseline-force') as HTMLInputElement).value = settings.brake_baseline_force;
+        (document.getElementById('brake-max-force') as HTMLInputElement).value = settings.brake_max_force;
+        (document.getElementById('enable-brake-resistance') as HTMLInputElement).checked = settings.enable_brake_resistance;
+        (document.getElementById('enable-throttle-resistance') as HTMLInputElement).checked = settings.enable_throttle_resistance;
+        (document.getElementById('enable-abs') as HTMLInputElement).checked = settings.enable_abs;
+        (document.getElementById('enable-startup-pulse') as HTMLInputElement).checked = settings.enable_startup_pulse;
+        
+        // Update slider values display
+        (document.getElementById('brake-deadzone-value') as HTMLInputElement).value = settings.brake_deadzone;
+        (document.getElementById('brake-baseline-force-value') as HTMLInputElement).value = settings.brake_baseline_force;
+        (document.getElementById('brake-max-force-value') as HTMLInputElement).value = settings.brake_max_force;
+        
+        console.log('Settings loaded:', settings);
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+loadSettings();
+
 // GitHub link click handler
 const githubLink = document.getElementById('github-link') as HTMLAnchorElement;
 if (githubLink) {
