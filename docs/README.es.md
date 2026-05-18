@@ -1,6 +1,8 @@
 # Forza DualSense
 
+<p align="center">
 <img width="256" height="256" alt="icon" src="https://github.com/user-attachments/assets/408a0795-5182-40a2-b939-631545007050" />
+</p>
 
 <p align="center">
   <i>Interfaz moderna para gestionar el mando DualSense en Forza Horizon</i>
