@@ -21,6 +21,8 @@
 
 # Forza DualSense
 <p align="center">
+  <img width="1202" height="802" alt="Снимок экрана 2026-05-18 204737" src="https://github.com/user-attachments/assets/a831992c-0474-497a-bf23-7f85b4de5fe6" />
+
   <i>Modern interface for managing DualSense gamepad in Forza Horizon</i>
 </p>
 
