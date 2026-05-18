@@ -1,4 +1,7 @@
 # Forza DualSense
+
+![](https://github.com/BORGERone/ShadowLibrary/blob/main/docs/logo.png)
+
 <p align="center">
   <i>Interfaz moderna para gestionar el mando DualSense en Forza Horizon</i>
 </p>

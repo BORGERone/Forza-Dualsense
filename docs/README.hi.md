@@ -1,4 +1,7 @@
 # Forza DualSense
+
+![](https://github.com/BORGERone/ShadowLibrary/blob/main/docs/logo.png)
+
 <p align="center">
   <i>Forza Horizon में DualSense कंट्रोलर को प्रबंधित करने के लिए आधुनिक इंटरफेस</i>
 </p>
