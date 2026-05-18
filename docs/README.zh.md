@@ -1,6 +1,6 @@
 # Forza DualSense
 
-![](https://github.com/BORGERone/ShadowLibrary/blob/main/docs/logo.png)
+<img width="256" height="256" alt="icon" src="https://github.com/user-attachments/assets/408a0795-5182-40a2-b939-631545007050" />
 
 <p align="center">
   <i>Forza Horizon中管理DualSense手柄的现代界面</i>
