@@ -96,7 +96,6 @@ Open Forza Horizon → **Settings → HUD & Gameplay**, scroll to the bottom:
 
 ## Troubleshooting
 
-### Gamepad not connecting
 - Ensure the gamepad is connected via USB or Bluetooth
 - When using third-party drivers (like DS4W), **<u>FULLY</u>** disable Steam Input
 - Check that Python is installed and working
