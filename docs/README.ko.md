@@ -4,7 +4,7 @@
 
 # Forza DualSense
 <p align="center">
-  <img width="1202" height="802" alt="Screenshot" src="https://github.com/user-attachments/assets/a831992c-0474-497a-bf23-7f85b4de5fe6" />
+  <img width="1202" height="802" alt="Screenshot" src="https://github.com/user-attachments/assets/4968f25e-8b51-499b-b968-292f5c191fb9" />
 
   <i>Forza Horizon에서 DualSense 컨트롤러를 관리하기 위한 최신 인터페이스</i>
 </p>
