@@ -87,7 +87,8 @@ Open Forza Horizon → **Settings → HUD & Gameplay**, scroll to the bottom:
 
 ### Initial Setup
 1. Launch the application
-2. Ensure the gamepad is connected
+2. Ensure the gamepad is connected 
+**You should feel a haptic <u>pulse</u> in the triggers (L2/R2)**
 3. Configure UDP parameters for game communication
 4. Adjust trigger and joystick sensitivity
 5. Launch Forza Horizon via the application button
