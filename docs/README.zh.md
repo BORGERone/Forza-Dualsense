@@ -192,3 +192,9 @@ Python后端通过stdin/stdout使用JSON与Rust后端通信:
 ```
 
 ---
+
+## 致谢
+
+本项目使用 [Forza Horizon DualSense Python](https://github.com/HamzaYslmn/Forza-Horizon-DualSense-Python) by HamzaYslmn 的 Python 后端代码，该代码在 AGPL v3 下许可。原始项目提供了 DualSense 手柄与 Forza Horizon 通信的核心功能。
+
+---

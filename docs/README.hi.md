@@ -185,10 +185,16 @@ Python बैकएंड stdin/stdout के माध्यम से JSON क
 {"type": "update_setting", "key": "udp_port", "value": 5300}
 ```
 
-### प्रतिक्रिया (stdout से)
+### प्रतिक्रियाएं (stdout से)
 ```json
 {"status": "started", "message": "Backend started successfully"}
 {"type": "status", "dualsense_connected": true, "running": true, "settings": {...}}
 ```
+
+---
+
+## धन्यवाद
+
+यह प्रोजेक्ट [Forza Horizon DualSense Python](https://github.com/HamzaYslmn/Forza-Horizon-DualSense-Python) by HamzaYslmn का Python बैकएंड कोड उपयोग करता है, जो AGPL v3 के तहत लाइसेंस प्राप्त है। मूल प्रोजेक्ट Forza Horizon के साथ DualSense कंट्रोलर संचार के लिए मुख्य कार्यक्षमता प्रदान करता है।
 
 ---

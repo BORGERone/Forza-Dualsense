@@ -185,10 +185,16 @@ Pythonバックエンドはstdin/stdout経由でJSONを使用してRustバック
 {"type": "update_setting", "key": "udp_port", "value": 5300}
 ```
 
-### レスポンス (stdoutから)
+### 応答 (stdout から)
 ```json
 {"status": "started", "message": "Backend started successfully"}
 {"type": "status", "dualsense_connected": true, "running": true, "settings": {...}}
 ```
+
+---
+
+## 謝辞
+
+このプロジェクトは、[Forza Horizon DualSense Python](https://github.com/HamzaYslmn/Forza-Horizon-DualSense-Python) by HamzaYslmn の Python バックエンドコードを使用しており、AGPL v3 の下でライセンスされています。オリジナルプロジェクトは、Forza Horizon との DualSense コントローラー通信のためのコア機能を提供しています。
 
 ---

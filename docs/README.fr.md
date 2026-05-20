@@ -192,3 +192,9 @@ Le backend Python communique avec le backend Rust via JSON sur stdin/stdout:
 ```
 
 ---
+
+## Remerciements
+
+Ce projet utilise le code backend Python de [Forza Horizon DualSense Python](https://github.com/HamzaYslmn/Forza-Horizon-DualSense-Python) par HamzaYslmn, qui est licencie sous AGPL v3. Le projet original fournit la fonctionnalite principale pour la communication de la manette DualSense avec Forza Horizon.
+
+---
